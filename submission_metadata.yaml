@@ -1,17 +1,17 @@
 # Fill these values before portal upload.
-team_name: "TODO"
+team_name: "Team Astro"
 primary_contact:
-  name: "TODO"
-  email: "TODO"
-  phone: "TODO"
-github_repository_url: "https://github.com/TODO/TODO"
-sandbox_demo_link: "TODO - host sandbox_app.py on HuggingFace Spaces, Streamlit Cloud, Replit, or provide Docker run recipe"
+  name: "Abishek Priyan M"
+  email: "abishekpriyanm369@gmail.com"
+  phone: "8531058742"
+github_repository_url: "https://github.com/Unknown-guy-369/Intelligent-candidate-rank-system.git"
+sandbox_demo_link: "https://huggingface.co/spaces/abishek-priyan-369/redrob-candidate-ranker-sandbox"
 ai_tools_declared:
-  - ChatGPT
-compute_environment_summary: "MacBook Pro, CPU-only, Python virtualenv; final ranking from precomputed feature records"
+  - CODEX
+compute_environment_summary: "MacBook Pro M5 Pro, 24 GB RAM, macOS 26.5.1, CPU-only Python virtualenv; transformer feature precompute 394.9s; final ranking from precomputed feature records 2.46s over 100,000 candidates"
 team_members:
-  - name: "TODO"
-    email: "TODO"
+  - name: "Abishek Priyan M"
+    email: "abishekpriyanm369@gmail.com"
 methodology_summary: >
   Offline hybrid ranker for the Senior AI Engineer JD. The system cleans and
   normalizes candidate records, flags honeypots and trap profiles, extracts

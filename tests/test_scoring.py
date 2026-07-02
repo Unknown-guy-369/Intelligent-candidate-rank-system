@@ -86,6 +86,12 @@ class ScoringTests(unittest.TestCase):
         rejected = score_candidate(make_features(tier=0, risk="reject_or_near_zero"))
         self.assertEqual(rejected["score"], 0.0)
 
+    def test_temporal_paradox_flag_scores_zero(self):
+        features = make_features()
+        features["risk"]["flag_names"] = ["last_active_before_signup"]
+
+        self.assertEqual(score_candidate(features)["score"], 0.0)
+
     def test_reasoning_uses_profile_evidence(self):
         features = make_features()
         reasoning = build_reasoning(features, score_candidate(features))

@@ -159,6 +159,16 @@ class RiskTests(unittest.TestCase):
 
         self.assertEqual(flags["services_or_consulting_only_history"]["severity"], "high")
 
+    def test_last_active_before_signup_is_fatal(self):
+        candidate = self.make_candidate()
+        candidate["_cleaning"]["notes"] = ["last_active_before_signup"]
+
+        risk = assess_candidate_risk(candidate)
+        flags = {flag["name"]: flag for flag in risk["flags"]}
+
+        self.assertEqual(flags["last_active_before_signup"]["severity"], "severe")
+        self.assertEqual(risk["recommendation"], "reject_or_near_zero")
+
     def test_assess_file_reuses_valid_cache(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

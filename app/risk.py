@@ -18,7 +18,7 @@ from app.io import iter_candidate_records, write_json
 from app.preprocess import input_fingerprint, normalize_label, normalize_text
 
 
-RISK_VERSION = "risk_v5"
+RISK_VERSION = "risk_v6"
 DEFAULT_REFERENCE_DATE = date(2026, 6, 29)
 
 SEVERITY_POINTS = {
@@ -260,8 +260,8 @@ def flag_cleaning_contradictions(flags: list[dict[str, Any]], cleaning_notes: se
         add_flag(
             flags,
             "last_active_before_signup",
-            "medium",
-            "Activity date is earlier than signup date; this is suspicious but not enough to reject alone.",
+            "severe",
+            "Activity date is earlier than signup date; this temporal paradox is treated as a honeypot-level contradiction.",
         )
 
 

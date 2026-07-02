@@ -8,165 +8,183 @@ app_port: 7860
 pinned: false
 ---
 
-# Redrob Intelligent Candidate Discovery & Ranking
+# Redrob Intelligent Candidate Discovery & Ranking - Hybrid Ranker
 
-Offline hybrid candidate ranking system for the Redrob Intelligent Candidate Discovery & Ranking Hackathon.
+Solution for the Redrob AI x INDIA.RUNS Data & AI Challenge: rank the top 100 candidates from a 100,000-candidate pool for the **Senior AI Engineer - Founding Team** job description.
 
-The system ranks the top 100 candidates for the Senior AI Engineer - Founding Team JD using full profile evidence, not skill-keyword counts. It combines deterministic cleaning/risk checks, JD evidence extraction, optional local transformer semantic scoring, business/logistics penalties, and grounded reasoning.
+## Problem Statement
 
-## Final Submission File
+Traditional hiring tools miss strong candidates because they rely on keyword matching and can be fooled by noisy or keyword-stuffed resumes.
 
-The current submit-ready CSV is:
+This project builds an offline intelligent ranking engine that analyzes full candidate profiles, detects traps, and produces an explainable top-100 candidate list.
 
-```bash
-data/processed/full_rank_transformer/submission.csv
+## TL;DR
+
+This is a hybrid, evidence-first candidate ranker. It combines deterministic profile cleaning, risk and honeypot detection, JD-specific career evidence extraction, local transformer semantic alignment, and transparent business scoring.
+
+It is deliberately **not** a keyword matcher. Skills are treated as supporting evidence only; career history, shipped systems, role context, production relevance, availability, and risk consistency carry the ranking.
+
+- **Final output:** `data/processed/full_rank_transformer/submission.csv`
+- **Validation:** passes the official `validator/validate_submission.py`
+- **Dataset size:** 100,000 candidates
+- **Run machine:** MacBook Pro M5 Pro, 24 GB RAM, macOS 26.5.1, CPU-only
+- **Top-100 audit:** 0 fatal honeypot flags, 0 services-only careers, 0 non-technical titles, 0 candidates with 120-day notice
+- **Semantic model:** `BAAI/bge-small-en-v1.5`, used locally after a cheap prefilter
+- **No hosted LLM/API calls during ranking**
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    JD["Job Description<br/>Senior AI Engineer JD"] --> JDP["JD Requirement Parser<br/>must-have signals<br/>positive signals<br/>negative signals"]
+    DATA["100K Candidate Dataset<br/>career history<br/>skills<br/>activity signals"] --> LOAD["Streaming Loader<br/>bounded memory"]
+    LOAD --> CLEAN["Preprocessing<br/>normalize dates, titles,<br/>skills, experience"]
+    CLEAN --> RISK["Risk & Honeypot Detection<br/>temporal paradoxes<br/>keyword traps<br/>services-only careers"]
+    RISK --> FEAT["Evidence Feature Extraction<br/>career evidence<br/>production ML/search<br/>logistics"]
+    JDP --> SEM["Transformer Semantic Alignment<br/>BGE small local model"]
+    FEAT --> SEM
+    SEM --> SCORE["Hybrid Scoring Engine<br/>evidence weighted<br/>risk penalized"]
+    SCORE --> EXPLAIN["Explainability Layer<br/>grounded reasoning only"]
+    EXPLAIN --> OUT["Validated Output<br/>submission.csv<br/>Top 100"]
+    RISK --> AUDIT["Audit Artifacts<br/>audit.jsonl<br/>ranking_report.json"]
+    SCORE --> AUDIT
 ```
 
-Validate it with:
+Pipeline:
+
+```text
+candidates.jsonl
+  -> streaming loader
+  -> preprocessing / normalization
+  -> risk and honeypot detection
+  -> JD evidence feature extraction
+  -> local transformer semantic scoring
+  -> hybrid scoring and business penalties
+  -> grounded reasoning generation
+  -> top-100 submission.csv
+```
+
+## How The Ranker Works
+
+The final score is a weighted blend of role-fit evidence and business constraints:
+
+```text
+score =
+  weighted_evidence(
+    suitability_tier,
+    career_evidence,
+    semantic_alignment,
+    search_ranking,
+    vector_search,
+    embeddings,
+    evaluation,
+    python,
+    production,
+    title_alignment,
+    product_context,
+    availability,
+    location
+  )
+  - risk_penalties
+  - business_penalties
+
+fatal honeypot / contradiction flags force score = 0
+```
+
+Important design choices:
+
+| Decision | Why it matters |
+| --- | --- |
+| Career evidence outweighs skills | The dataset contains noisy skills and keyword traps. A skill list alone should not rank a candidate. |
+| Risk detection runs before scoring | Honeypots, impossible timelines, and services-only profiles should not survive just because they contain AI terms. |
+| Transformer alignment is gated by prefiltering | The model helps compare JD meaning to profile context, but it does not rescue unrelated candidates with weak career evidence. |
+| Business constraints are explicit | Notice period, activity, recruiter response rate, location, and relocation matter for a founding startup role. |
+| Reasoning is generated from extracted facts | Explanations use only candidate profile fields and audit evidence, avoiding hallucinated justifications. |
+
+## Trap And Honeypot Handling
+
+The ranker checks suspicious candidates before final ranking:
+
+- impossible timeline or date contradictions
+- last active date before signup date
+- career duration inconsistent with total experience
+- AI keyword stuffing without career evidence
+- non-technical current role with dense AI skills
+- services/consulting-only career history
+- CV/speech/robotics-only backgrounds without retrieval/search overlap
+- architect/manager profiles with weak recent hands-on production work
+- inactive profiles, low recruiter response, or very long notice period
+
+Severe contradictions are hard-zeroed. Uncertain risks are penalized and surfaced as tradeoffs in the reasoning.
+
+## Why This Is Not Keyword Matching
+
+A keyword matcher would reward profiles that simply list terms like LLM, FAISS, embeddings, BM25, or vector database names.
+
+This system asks stronger questions:
+
+- Did the candidate actually build or ship a ranking, search, retrieval, recommendation, or matching system?
+- Was the work done in a product/startup context relevant to Redrob?
+- Is there evidence of evaluation, latency, feedback loops, A/B testing, or production ownership?
+- Are the candidate's title, experience, skills, career history, and platform signals internally consistent?
+- Is the candidate reachable and realistically hireable for the JD timeline?
+
+## Results And Validation
+
+Latest full transformer run:
+
+```text
+total candidates: 100000
+semantic encoded after prefilter: 2235
+semantic skipped by prefilter: 97765
+transformer feature extraction elapsed: 394.9s / 6m 34.9s
+final ranking from cached features: 2.46s
+final output rows: 100
+official validator: passed
+```
+
+Latest top-100 audit:
+
+```text
+top100 rows: 100
+fatal honeypot flags: 0
+last_active_before_signup: 0
+120-day notice candidates: 0
+services-only careers: 0
+weak career evidence candidates: 0
+non-technical titles: 0
+```
+
+Validate the final CSV:
 
 ```bash
 python3 validator/validate_submission.py data/processed/full_rank_transformer/submission.csv
 ```
 
-Expected result:
+Expected output:
 
 ```text
 Submission is valid.
 ```
 
-Before uploading, copy it to the registered participant/team filename required by the portal:
+## Reproduce
+
+### 1. Install core requirements
 
 ```bash
-cp data/processed/full_rank_transformer/submission.csv YOUR_TEAM_ID.csv
-python3 validator/validate_submission.py YOUR_TEAM_ID.csv
+pip install -r requirements.txt
 ```
 
-## Why This Is Not Keyword Matching
-
-The hackathon sample submission ranks HR Managers and other non-technical profiles highly because they list many AI skills. This project treats that as a trap.
-
-The ranker checks:
-
-- career-history prose, not only `skills[]`
-- production search/ranking/retrieval/recommendation evidence
-- evaluation evidence such as A/B testing, NDCG, MRR, and offline-online relevance work
-- title and career consistency
-- product-company/startup fit
-- availability signals such as notice period, activity, response rate, and relocation
-- honeypot and contradiction risk
-- local transformer semantic fit only after a cheap JD-evidence prefilter
-
-## Architecture
-
-```text
-candidates.jsonl
-  -> preprocessing / normalization
-  -> risk and honeypot detection
-  -> JD evidence feature extraction
-  -> optional local transformer semantic scoring
-  -> hybrid scoring and business penalties
-  -> top-100 CSV with grounded reasoning
-```
-
-Main modules:
-
-```text
-app/io.py          streaming JSON/JSONL/GZ input helpers
-app/preprocess.py cleaning and normalization
-app/risk.py       honeypot, trap, contradiction, and business-risk flags
-app/features.py   JD evidence and semantic feature extraction
-app/semantic.py   hashed fallback + optional local transformer backend
-app/scoring.py    final score, ranking, reasoning, audit output
-rank.py           one-command reproduction entrypoint
-```
-
-## Trap And Honeypot Handling
-
-The pipeline does not blindly delete unusual candidates. It rejects only severe contradictions and penalizes uncertain risk.
-
-Examples of detected risks:
-
-- impossible career dates or current-role metadata
-- profile years inconsistent with summed career history
-- expert AI skills with near-zero duration
-- dense AI skill stuffing with no career evidence
-- non-technical current role with AI buzzwords
-- CV/speech/robotics-only profile without NLP/IR/retrieval overlap
-- services/consulting-only career history
-- inactive or low-response candidates
-- very long notice period
-
-Severe candidates are scored near zero. Medium-risk candidates remain eligible but receive penalties and score caps.
-
-## Semantic Scoring
-
-The default code path is dependency-free and uses a hashed bi-encoder fallback. The stronger path uses a real local transformer model:
-
-```text
-BAAI/bge-small-en-v1.5
-```
-
-Transformer scoring is protected by a prefilter:
-
-- candidates with cheap JD evidence are transformer-encoded
-- candidates with no cheap search/ranking/retrieval/product-ML evidence get no semantic boost
-
-Observed full run:
-
-```text
-total candidates: 100000
-sentence-transformer encoded: 2235
-skipped by semantic prefilter: 97765
-feature extraction elapsed: 394.9s
-```
-
-This transformer pass is an offline feature-precomputation step. The final scoring/ranking step from feature records is fast and CPU-only.
-
-## Reproduce Final Transformer Submission
-
-Install optional transformer dependencies in a Python environment:
+For transformer scoring:
 
 ```bash
 pip install -r requirements-transformer.txt
-```
-
-One-time model download/cache setup:
-
-```bash
 python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5', device='cpu')"
 ```
 
-Run feature extraction with local cached model files:
+### 2. Fast ranking from precomputed feature records
 
-```bash
-python3 -m app.features \
-  --input data/processed/full_risk/candidates_with_risk.jsonl \
-  --out-dir data/processed/full_features_transformer \
-  --semantic-backend transformer \
-  --semantic-model BAAI/bge-small-en-v1.5 \
-  --semantic-batch-size 64 \
-  --semantic-no-fallback \
-  --progress-every 1000 \
-  --force
-```
-
-Run final ranking:
-
-```bash
-python3 -m app.scoring \
-  --features data/processed/full_features_transformer/candidate_features.jsonl \
-  --out data/processed/full_rank_transformer/submission.csv \
-  --audit-out data/processed/full_rank_transformer/audit.jsonl \
-  --top-n 100
-```
-
-Validate:
-
-```bash
-python3 validator/validate_submission.py data/processed/full_rank_transformer/submission.csv
-```
-
-One-command reproduction from precomputed feature records:
+This is the strict CPU-only ranking step:
 
 ```bash
 python3 rank.py \
@@ -174,7 +192,7 @@ python3 rank.py \
   --out data/processed/full_rank_transformer/submission.csv
 ```
 
-One-command full local pipeline from raw candidates:
+### 3. Full local pipeline from raw candidates
 
 ```bash
 python3 rank.py \
@@ -188,176 +206,63 @@ python3 rank.py \
   --force
 ```
 
-The full local pipeline includes transformer feature precomputation and may exceed the five-minute ranking budget on CPU. The fast Stage 3 ranking step is the `--features` command over precomputed feature records.
+The full local transformer feature pass is an offline precompute stage and can exceed a strict five-minute budget on CPU. The final ranking from precomputed feature records is fast and offline.
 
-## Fast CPU-Only Fallback
+### 4. Dependency-light fallback
 
-If transformer dependencies or local model files are unavailable, use the standard-library hashed semantic backend:
+If transformer dependencies or local model files are unavailable:
 
 ```bash
-python3 -m app.features \
-  --input data/processed/full_risk/candidates_with_risk.jsonl \
-  --out-dir data/processed/full_features \
+python3 rank.py \
+  --candidates data/candidates.jsonl \
+  --out data/processed/repro_hashed/submission.csv \
+  --work-dir data/processed/repro_hashed \
   --semantic-backend hashed \
   --force
 ```
 
-Then:
-
-```bash
-python3 -m app.scoring \
-  --features data/processed/full_features/candidate_features.jsonl \
-  --out data/processed/full_rank/submission.csv \
-  --audit-out data/processed/full_rank/audit.jsonl \
-  --top-n 100
-```
-
-## Full Pipeline Commands
-
-From raw candidates:
-
-```bash
-python3 -m app.preprocess \
-  --input data/candidates.jsonl \
-  --out-dir data/processed/full_clean
-
-python3 -m app.risk \
-  --input data/processed/full_clean/candidates_clean.jsonl \
-  --out-dir data/processed/full_risk
-
-python3 -m app.features \
-  --input data/processed/full_risk/candidates_with_risk.jsonl \
-  --out-dir data/processed/full_features_transformer \
-  --semantic-backend transformer \
-  --semantic-model BAAI/bge-small-en-v1.5 \
-  --semantic-batch-size 64 \
-  --semantic-no-fallback \
-  --force
-
-python3 -m app.scoring \
-  --features data/processed/full_features_transformer/candidate_features.jsonl \
-  --out data/processed/full_rank_transformer/submission.csv \
-  --audit-out data/processed/full_rank_transformer/audit.jsonl \
-  --top-n 100
-```
-
-## Final Top-100 Audit
-
-Latest transformer submission audit:
+## Repository Layout
 
 ```text
-rows: 100
-unique candidate IDs: 100
-semantic encoded in top 100: 100
-semantic skipped in top 100: 0
-weak career evidence in top 100: 0
-non-technical titles in top 100: 0
-120-day notice in top 100: 0
-services-only histories in top 100: 0
-current services context: 1 candidate, not services-only, 60-day notice
+app/
+  io.py          streaming JSON / JSONL / GZ helpers
+  preprocess.py cleaning and normalization
+  risk.py       trap, honeypot, and contradiction detection
+  features.py   JD evidence and semantic feature extraction
+  semantic.py   hashed fallback and local transformer backend
+  scoring.py    final ranking, reasoning, audit output
+
+rank.py                     one-command reproduction entrypoint
+sandbox_app.py              small Gradio demo
+Dockerfile                  Hugging Face Space runtime
+requirements.txt            core dependency-light pipeline
+requirements-transformer.txt optional transformer backend
+requirements-sandbox.txt    sandbox dependencies
+validator/                  official format validator
+tests/                      regression tests
 ```
-
-## Output Format
-
-The submission CSV follows:
-
-```csv
-candidate_id,rank,score,reasoning
-```
-
-Rules:
-
-- exactly 100 candidate rows
-- ranks 1 through 100 exactly once
-- unique candidate IDs
-- scores monotonically non-increasing
-- UTF-8 CSV
-- reasoning is grounded in candidate profile facts
-
-## Official Submission Checklist
-
-CSV:
-
-- [x] CSV file exists at `data/processed/full_rank_transformer/submission.csv`
-- [x] Header is exactly `candidate_id,rank,score,reasoning`
-- [x] Exactly 100 data rows plus one header row
-- [x] Ranks are exactly 1 through 100, each used once
-- [x] Candidate IDs are unique and use `CAND_XXXXXXX`
-- [x] Scores are monotonically non-increasing
-- [x] Reasoning column is populated with profile-grounded 1-2 sentence explanations
-- [x] Local validator passes
-- [ ] Rename/copy final file to registered team filename, for example `YOUR_TEAM_ID.csv`
-- [ ] Validate the renamed file before upload
-
-Portal metadata to prepare:
-
-- [ ] Team name
-- [ ] Primary contact name
-- [ ] Primary contact email
-- [ ] Primary contact phone
-- [ ] GitHub repository URL
-- [ ] Sandbox/demo link or self-contained Docker run recipe
-- [ ] AI tools declaration
-- [ ] Compute environment summary
-- [ ] Team member list
-- [ ] Methodology summary, 200 words or fewer
-
-Repository checklist for Stage 3:
-
-- [x] Source code included under `app/`
-- [x] README includes setup and reproduction commands
-- [x] `requirements.txt` for the core pipeline
-- [x] `requirements-transformer.txt` for optional transformer backend
-- [x] `submission_metadata.yaml` template at repo root
-- [x] `sandbox_app.py` small-sample demo app
-- [x] Validator included under `validator/`
-- [x] No hosted LLM/API calls during ranking
-- [x] CPU-only ranking from precomputed feature records
-- [ ] Fill `submission_metadata.yaml` TODO values before sharing repo
-- [ ] Provide a working sandbox/demo link or Docker recipe
-
-Manual review readiness:
-
-- [x] Reasoning mentions specific titles, companies, years, skills, and concerns where relevant
-- [x] Reasoning is varied, not one repeated template
-- [x] No non-technical profiles in final top 100
-- [x] No services-only profiles in final top 100
-- [x] No 120-day-notice profiles in final top 100
-- [x] No semantic-prefilter-skipped candidates in final top 100
 
 ## Tests
-
-Run:
 
 ```bash
 python3 -m unittest discover -s tests
 ```
 
-Current result:
+Current test status:
 
 ```text
-Ran 26 tests
+Ran 28 tests
 OK
 ```
 
 ## Sandbox Demo
 
-The submission spec requires a hosted sandbox/demo link. This repo includes a small-sample Gradio app:
+Run locally:
 
 ```bash
 pip install -r requirements-sandbox.txt
 python sandbox_app.py
 ```
-
-The sandbox accepts a candidate `.json`, `.jsonl`, or `.jsonl.gz` upload, runs the offline hashed-backend pipeline, and returns a ranked CSV. It is meant for <=100 candidate sanity checks, as requested by the spec. The full 100k ranking is reproduced through the repository commands above.
-
-Recommended hosting options:
-
-- HuggingFace Spaces
-- Streamlit Cloud
-- Replit
-- Google Colab notebook
-- Docker image with a documented `docker run` command
 
 Deploy to Hugging Face Spaces:
 
@@ -368,14 +273,31 @@ python3 -m venv .venv-hf
 scripts/deploy_hf_space.sh YOUR_HF_USERNAME/redrob-candidate-ranker-sandbox
 ```
 
-After deployment, add the URL to `submission_metadata.yaml`:
+The sandbox accepts a small `.json`, `.jsonl`, or `.jsonl.gz` candidate file and returns a ranked CSV preview. It is a demo surface, not the full 100K production run.
 
-```text
-https://huggingface.co/spaces/YOUR_HF_USERNAME/redrob-candidate-ranker-sandbox
-```
+## Final System Specs
 
-## Notes On Compute Constraints
+| Field | Value |
+| --- | --- |
+| Team | Team Astro |
+| Member | Abishek Priyan M |
+| GitHub repository | https://github.com/Unknown-guy-369/Intelligent-candidate-rank-system.git |
+| Sandbox URL | https://huggingface.co/spaces/abishek-priyan-369/redrob-candidate-ranker-sandbox |
+| Final run machine | MacBook Pro M5 Pro, 24 GB RAM |
+| Operating system | macOS 26.5.1 |
+| Ranking mode | CPU-only, offline, from precomputed transformer feature records |
+| Transformer feature precompute time | 394.9s / 6m 34.9s |
+| Final ranking time | 2.46s over 100,000 feature records |
 
-The final scoring step is CPU-only, offline, and fast from precomputed feature records. Transformer feature extraction is an optional local precompute stage; it uses no hosted LLM/API and no GPU, but it may exceed five minutes on CPU for 100,000 candidates.
+## Submission Assets
 
-For the strictest reproduction setting, use the hashed backend or provide the precomputed feature artifact expected by `app.scoring`.
+- GitHub repository with source code, docs, tests, and reproduction commands
+- Final `submission.csv`
+- `audit.jsonl` and `ranking_report.json`
+- Hugging Face / Gradio sandbox demo
+- PPT
+- AI tools declaration in `submission_metadata.yaml`
+
+## AI Tools Declaration
+
+AI assistants were used for architecture discussion, code review, implementation support, README drafting, and PPT content preparation. The ranking pipeline itself does not call hosted LLM APIs and does not send candidate data to external LLM services during ranking.

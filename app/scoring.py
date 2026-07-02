@@ -11,7 +11,7 @@ from typing import Any
 from app.io import iter_candidate_records, write_json, write_jsonl
 
 
-SCORING_VERSION = "scoring_v3"
+SCORING_VERSION = "scoring_v4"
 
 TIER_PRIOR = {
     5: 0.95,
@@ -50,6 +50,14 @@ RISK_RECOMMENDATION_PENALTY = {
     "unknown": 0.08,
 }
 
+FATAL_RISK_FLAGS = {
+    "career_end_before_start",
+    "invalid_career_start_date",
+    "invalid_signup_date",
+    "invalid_last_active_date",
+    "last_active_before_signup",
+}
+
 
 def weighted_average(values: dict[str, float], weights: dict[str, float]) -> float:
     total_weight = sum(weights.values())
@@ -64,8 +72,9 @@ def score_candidate(features: dict[str, Any]) -> dict[str, Any]:
     risk = features.get("risk", {})
     recommendation = risk.get("recommendation", "unknown")
     risk_score = int(risk.get("risk_score") or 0)
+    flag_names = set(risk.get("flag_names", []))
 
-    if recommendation == "reject_or_near_zero" or tier == 0:
+    if recommendation == "reject_or_near_zero" or tier == 0 or flag_names & FATAL_RISK_FLAGS:
         final_score = 0.0
     else:
         values = {
