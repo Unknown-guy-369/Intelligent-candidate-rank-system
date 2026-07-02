@@ -1,0 +1,20 @@
+# Fill these values before portal upload.
+team_name: "TODO"
+primary_contact:
+  name: "TODO"
+  email: "TODO"
+  phone: "TODO"
+github_repository_url: "https://github.com/TODO/TODO"
+sandbox_demo_link: "TODO - host sandbox_app.py on HuggingFace Spaces, Streamlit Cloud, Replit, or provide Docker run recipe"
+ai_tools_declared:
+  - ChatGPT
+compute_environment_summary: "MacBook Pro, CPU-only, Python virtualenv; final ranking from precomputed feature records"
+team_members:
+  - name: "TODO"
+    email: "TODO"
+methodology_summary: >
+  Offline hybrid ranker for the Senior AI Engineer JD. The system cleans and
+  normalizes candidate records, flags honeypots and trap profiles, extracts
+  career-grounded search/ranking/retrieval evidence, applies a local
+  transformer semantic signal only after a cheap JD-evidence prefilter, and
+  produces grounded reasoning for the top 100 candidates.

@@ -1,0 +1,6 @@
+# Optional real transformer semantic backend.
+# Use Python 3.10-3.12 for best PyTorch/Transformers wheel support.
+numpy>=1.26
+torch>=2.3
+transformers>=4.42
+sentence-transformers>=3.0
