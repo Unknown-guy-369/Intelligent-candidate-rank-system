@@ -1,20 +1,79 @@
-# Fill these values before portal upload.
+# Redrob Hackathon — Submission Metadata
+#
+# Filled from the official Stage 3 metadata template.
+# These values should match the portal upload metadata.
+
+# ============================================================================
+# Team identity
+# ============================================================================
 team_name: "Team Astro"
+
 primary_contact:
   name: "Abishek Priyan M"
   email: "abishekpriyanm369@gmail.com"
-  phone: "8531058742"
-github_repository_url: "https://github.com/Unknown-guy-369/Intelligent-candidate-rank-system.git"
-sandbox_demo_link: "https://huggingface.co/spaces/abishek-priyan-369/redrob-candidate-ranker-sandbox"
-ai_tools_declared:
-  - CODEX
-compute_environment_summary: "MacBook Pro M5 Pro, 24 GB RAM, macOS 26.5.1, CPU-only Python virtualenv; transformer feature precompute 394.9s; final ranking from precomputed feature records 2.46s over 100,000 candidates"
+  phone: "+91-8531058742"
+
 team_members:
   - name: "Abishek Priyan M"
     email: "abishekpriyanm369@gmail.com"
-methodology_summary: >
-  Offline hybrid ranker for the Senior AI Engineer JD. The system cleans and
-  normalizes candidate records, flags honeypots and trap profiles, extracts
-  career-grounded search/ranking/retrieval evidence, applies a local
-  transformer semantic signal only after a cheap JD-evidence prefilter, and
-  produces grounded reasoning for the top 100 candidates.
+    role: "Solo participant / ML Engineer"
+
+# ============================================================================
+# Code and reproducibility
+# ============================================================================
+github_repo: "https://github.com/Unknown-guy-369/Intelligent-candidate-rank-system.git"
+
+sandbox_link: "https://huggingface.co/spaces/abishek-priyan-369/redrob-candidate-ranker-sandbox"
+
+reproduce_command: "python rank.py --features ./data/processed/full_features_transformer/candidate_features.jsonl --out ./submission.csv"
+
+# ============================================================================
+# Compute environment
+# ============================================================================
+compute:
+  platform: "MacBook Pro M5 Pro"
+  cpu_cores: 15
+  ram_gb: 24
+  python_version: "3.14.6"
+  os: "macOS 26.5.1"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: true
+  pre_computation_time_minutes: 6.58
+
+# ============================================================================
+# AI tools declaration
+# ============================================================================
+ai_tools_used:
+  - "OpenAI Codex / ChatGPT"
+
+ai_usage_summary: |
+  Used OpenAI Codex / ChatGPT for architecture discussion, code review,
+  implementation support, README drafting, and PPT content preparation.
+  The ranking pipeline itself does not call hosted LLM APIs and no candidate
+  data is sent to external LLM services during ranking.
+
+# ============================================================================
+# Approach summary
+# ============================================================================
+methodology_summary: |
+  Offline hybrid ranker for the Senior AI Engineer - Founding Team JD. The
+  system streams and normalizes 100,000 candidate profiles, detects honeypots
+  and suspicious profiles before scoring, extracts career-grounded evidence for
+  production search, ranking, retrieval, recommendation, embeddings, evaluation,
+  Python, and product-context work, then applies a local BGE transformer signal
+  only after a cheap JD-evidence prefilter. Final scoring is transparent and
+  evidence-weighted: career history outweighs keyword skills, severe temporal
+  contradictions are hard-zeroed, and logistics such as notice period and
+  recruiter responsiveness are penalized. The output is a validator-ready top
+  100 CSV with grounded 1-2 sentence reasoning for every selected candidate.
+
+# ============================================================================
+# Declarations
+# ============================================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true

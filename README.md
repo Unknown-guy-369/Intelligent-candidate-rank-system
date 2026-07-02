@@ -300,4 +300,4 @@ The sandbox accepts a small `.json`, `.jsonl`, or `.jsonl.gz` candidate file and
 
 ## AI Tools Declaration
 
-AI assistants were used for architecture discussion, code review, implementation support, README drafting, and PPT content preparation. The ranking pipeline itself does not call hosted LLM APIs and does not send candidate data to external LLM services during ranking.
+OpenAI Codex was used for coding assistance, debugging, documentation drafting . The architecture, methodology, ranking strategy, and final engineering decisions were directed and approved by the author. The ranking pipeline itself does not call hosted LLM APIs and does not send candidate data to external LLM services during ranking.
